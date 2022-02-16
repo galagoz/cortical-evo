@@ -1,0 +1,13 @@
+Annotation	Baseline
+chimp_PFC_enhancers_hg19	E073_active_marks
+chimp_PFC_promoters_hg19	E073_active_marks
+macaque_PFC_enhancers_hg19	E073_active_marks
+macaque_PFC_promoters_hg19	E073_active_marks
+HSE_12Opcw_active_merged	E081_active_marks
+HSE_12Fpcw_active_merged	E081_active_marks
+HSE_7pcw_active_merged	E081_active_marks
+HSE_8_5pcw_active_merged	E081_active_marks
+HAR	baseline
+Sweeps	baseline
+NeanDepleted	baseline
+NeanSNPs_3col	baseline

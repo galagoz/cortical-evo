@@ -10,12 +10,13 @@
 # version incompatibility.
 
 #-----Variables-----
-# $input - summary statistic file
-# $output - outfile_name
+# $inDir - path to summary statistics files
+# $outDir - path to your output folder
+# $sumstatsList - a text file with txt formatted sumstats files with full paths
 
-inDir="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface/withGlob/"
-outDir="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface/withGlob/munged/"
-sumstatsList="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface/withGlob/sumstats_txt_list.txt"
+inDir="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface_ancreg/"
+outDir="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface_ancreg/munged/"
+sumstatsList="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface_ancreg/sumstats_txt_list.txt"
 
 #-----
 
@@ -30,21 +31,18 @@ while read line; do
    LINE=$line
    tmp_base_name=$(basename "$line" .txt)
    echo $tmp_base_name
-   pheno_name="$(cut -d'_' -f5- <<<"$tmp_base_name")"
+   pheno_name="$(cut -d'_' -f1- <<<"$tmp_base_name")"
    echo $pheno_name
    tmp_run_file="${inDir}scripts/${pheno_name}.sh"
    output="${outDir}${tmp_base_name%.txt}_munged.txt"
    echo $line
-   echo '#!/bin/sh
+   echo '#!/bin/bash
 #$ -N munge_sumstats
 #$ -cwd
 #$ -q single.q
 #$ -S /bin/bash
 
-echo '$LINE'
-echo '$output'
-
-python /home/gokala/programs/ldsc/munge_sumstats.py --sumstats '$LINE' --out '$output' --merge-alleles /data/workspaces/lag/workspaces/lg-genlang/Working/Evolution/resources/w_hm3.snplist' > $tmp_run_file
+python /home/gokala/programs/ldsc/munge_sumstats.py --sumstats '$LINE' --out '$output' --merge-alleles /data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/resources/w_hm3.snplist' > $tmp_run_file
    chmod a+x $tmp_run_file
    echo "Created the script for cluster ->  submitting ${pheno_name} to the Grid"
    qsub -wd "${inDir}scripts" $tmp_run_file

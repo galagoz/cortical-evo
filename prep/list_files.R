@@ -1,8 +1,8 @@
 ## The folder containing GWAS summary statistics
-fileloc = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface_ancreg"
-outputdir = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface_ancreg/"
-filename = "sumstats_rdata_list.txt"
-curPattern = ".Rdata"
+fileloc = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/european/surface/withGlob/munged"
+outputdir = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/european/surface/withGlob/munged/"
+filename = "munged_sumstats_list.txt"
+curPattern = ".gz"
 
 ## read in gwas statistics file (compiled for all traits)
 fGWASsumstats=gsub(" ","",paste(outputdir,filename))
