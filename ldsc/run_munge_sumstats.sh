@@ -13,9 +13,9 @@
 # $input - summary statistic file
 # $output - outfile_name
 
-inDir="/data/clusterfs/lag/users/gokala/enigma-evol/dti/data/"
-outDir="/data/clusterfs/lag/users/gokala/enigma-evol/dti/data/munged/"
-sumstatsList="/data/clusterfs/lag/users/gokala/enigma-evol/dti/data/sumstats_txt_list.txt"
+inDir="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface/withGlob/"
+outDir="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface/withGlob/munged/"
+sumstatsList="/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface/withGlob/sumstats_txt_list.txt"
 
 #-----
 
@@ -30,7 +30,7 @@ while read line; do
    LINE=$line
    tmp_base_name=$(basename "$line" .txt)
    echo $tmp_base_name
-   pheno_name="$(cut -d'_' -f4- <<<"$tmp_base_name")"
+   pheno_name="$(cut -d'_' -f5- <<<"$tmp_base_name")"
    echo $pheno_name
    tmp_run_file="${inDir}scripts/${pheno_name}.sh"
    output="${outDir}${tmp_base_name%.txt}_munged.txt"
