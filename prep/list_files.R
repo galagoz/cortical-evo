@@ -1,6 +1,6 @@
 ## The folder containing GWAS summary statistics
-fileloc = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/european/surface/withGlob/munged"
-outputdir = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/european/surface/withGlob/munged/"
+fileloc = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface_ancreg/munged"
+outputdir = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/data/replication/surface_ancreg/munged/"
 filename = "munged_sumstats_list.txt"
 curPattern = ".gz"
 
