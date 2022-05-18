@@ -5,7 +5,7 @@ Original scripts for SDS and LDSC partitioned heritability are available here:
 https://bitbucket.org/jasonlouisstein/enigmaevolma6/src/master/
 We adapted the scripts written by Amanda Tilot and Jason Stein (Tilot et al., 2021) to our own data and research purposes, and written new scripts for the data preparation and additional analyses.
 
-## 1. Pre-processing GWAS summary statistics
+## Pre-processing GWAS summary statistics
 
 **a. Reformatting your GWAS summary statistics:**
 Reformat your GWAS summary statistics using `reformat_sumstats.sh`.
@@ -28,7 +28,7 @@ Compile Rdata files names ("/path/to/dir/summary_stats.txt") to a single txt fil
 **d. Munge non-ancestry regressed summary statistics:**
 Munge non-ancestry regressed `.txt` files to reformat and prepare files for the LDSC. Run `run_munge_sumstats.sh` to call `munge_sumstats.py`.
 
-## 2. Ancestry Regression
+## Ancestry Regression
 
 **a. Prior to ancestry regression:**
 - Run the first correlation test between your summary statistics and 1000G phase 3 PC loadings (first 20 PCs).
