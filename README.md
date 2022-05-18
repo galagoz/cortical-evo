@@ -30,7 +30,6 @@ Munge non-ancestry regressed `.txt` files to reformat and prepare files for the 
 ## 2. Ancestry Regression
 
 **a. Assessment Prior to ancestry regression:**
-
        **a1.** Run the first correlation test between your summary statistics and 1000G phase 3 PC loadings (first 20 PCs).
         Use `1000G_PC_cor_BJK_noGC.R` and `run_1000G_PC_cor_BJK_noGC.sh`.
         Plot your results using `plot1000G_PC_cor_noGC_BJK.R` and `run_plot1000G_PC_cor_noGC_BJK.sh` (Fig.1a from Tilot et al., 2021).
@@ -43,7 +42,6 @@ Munge non-ancestry regressed `.txt` files to reformat and prepare files for the 
 Use `AncestryRegression_noGC.R` and `run_AncestryRegression_noGC.sh`.
 
 **c. Assessment After ancestry regression:**
-
     **c1.** Run the second correlation test between your summary statistics and 1000G phase 3 PC loadings (first 20 PCs).
         Use `1000G_PC_cor_ancreg_BJK_noGC.R` and `run_1000G_PC_cor_ancreg_BJK_noGC.sh`.
         Plot your results using `plot1000G_PC_cor_ancreg_noGC_BJK.R` and `run_plot1000G_PC_cor_ancreg_noGC_BJK.sh`  (Fig.1b from Tilot et al., 2019).
