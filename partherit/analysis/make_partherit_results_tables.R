@@ -12,7 +12,7 @@ library(tidyverse)
 library(openxlsx)
 options(stringsAsFactors=FALSE)
 
-annots = dir(path = "/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/european_lr/results", full.names = F, recursive = F, pattern = "sorted")
+annots = dir(path = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/results/", full.names = F, recursive = F, pattern = "sorted")
 
 #####
 # Define a custom p.adjust to correct for the total number of independent DTI tracts.
@@ -76,11 +76,10 @@ my.p.adj = function (p, method = p.adjust.methods, n = length(p))
 }
 
 #####
-
-#i=2
+#i=1
 for (i in 1:length(annots)){
       print(annots[i])
-      files = Sys.glob(path = paste0("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/european_lr/results/",annots[i],"/*.gz.results"))
+      files = Sys.glob(path = paste0("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/results/",annots[i],"/*.gz.results"))
       partheritresults = data.frame(Category = character(0),
                                     Prop._SNPs= numeric(0),
                                     Prop._h2= numeric(0),
@@ -95,11 +94,11 @@ for (i in 1:length(annots)){
       for (j in 1:length(files)) {
         results = read.table(files[j],header=TRUE)
         info1 = str_split(files[j], pattern = "/")
-        info2 = str_split(info1[[1]][17], pattern = "_")
-        results$Annotation = info1[[1]][16]
-        results$Analysis = if_else(grepl("hick",info2[[1]][4]), "Thickness", "Surface Area")
+        info2 = str_split(info1[[1]][14], pattern = "_")
+        results$Annotation = info1[[1]][13]
+        results$Analysis = "Surface Area" #if_else(grepl("hick",info2[[1]][4]), "Thickness", "Surface Area")
         #results$Analysis = "WMtracts"
-        results$Region = paste(info2[[1]][5:6],collapse = "_")
+        results$Region = paste(info2[[1]][5:6],collapse = "_") #info2[[1]][5]
         partheritresults = rbind(partheritresults,results[1,])
       }
       partheritresults = partheritresults %>% 
@@ -109,7 +108,7 @@ for (i in 1:length(annots)){
       partheritresults$annot.p <- if_else(partheritresults$fdr < 0.05, as.character(round(partheritresults$fdr, digits = 4)), "")
       partheritresults$significant = if_else(partheritresults$fdr < 0.05, "Yes", "")
       write.table(partheritresults, 
-                  paste0("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/european_lr/results/results_tables/",unique(partheritresults$Annotation),"_results_FDR43.txt"),
+                  paste0("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/results_tables/",unique(partheritresults$Annotation),"_results_FDR.txt"),
                   sep = "\t", col.names = TRUE, row.names = TRUE, quote = FALSE)
 }
 
@@ -185,3 +184,32 @@ all_annots_dti_right$significant = if_else(all_annots_dti_right$fdr2 < 0.05, "Ye
 write.xlsx(all_annots_dti_right, 
            "/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/dti/all_annots_results_RI_FDR25_FDR3.xlsx",
            row.names = F, quote = F)
+
+##################################################################################################
+
+# Replication
+
+results_replication = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/replication/partherit/results_tables/HSE_7pcw_active_merged_results_FDR_subset.txt", 
+                                 row.names = NULL, header = T)
+
+results_replication$fdr = p.adjust(results_replication$Enrichment_p,
+                                   method = "fdr")
+
+write.table(results_replication, "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/replication/partherit/results_tables/HSE_7pcw_active_merged_results_subset_FDR2.txt",
+            row.names = F, quote = F)
+
+results_old_replication = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/replication/partherit/results_tables/HSE_7pcw_active_merged_results_FDR_subset.txt", 
+                                     row.names = NULL, header = T)
+
+##################################################################################################
+
+# Hemispheric
+
+results_hemispheric = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/results_tables/", 
+                                 row.names = NULL, header = T)
+
+results_hemispheric$fdr = p.adjust(results_replication$Enrichment_p,
+                                   method = "fdr")
+
+results_old_hemispheric = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/replication/partherit/results_tables/HSE_7pcw_active_merged_results_FDR_subset.txt", 
+                                     row.names = NULL, header = T)

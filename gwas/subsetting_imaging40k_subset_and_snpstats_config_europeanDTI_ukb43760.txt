@@ -1,0 +1,26 @@
+## CONFIGURATION FOR SUBSETTING AND SNP STATISTICS CALCULATION ##
+
+
+
+## INPUT
+
+RunName=ukb43760_enigmaEvo_europeanDTI
+# Name for the run/subset (will be used to name the output files)
+
+ImagingSubsetData=/data/clusterfs/lag/users/barmol/enigma_evo/primary_data/wa/imagingT1_wa
+# Path to the full imaging subset data that is used as a starting point for filtering
+# Enter only the prefix of the file (filename without chromosome number, .bgen, .sample, etc.)
+# There are four possible prefixes for the existing subsets:
+# Version 1, White British ancestry: imaging40k or imaging_40k_no_rel_filter
+# Version 2, White ancestry: imaging40k_wa or imaging40k_wa_no_rel_filter, 
+# It is recommended to copy the data from the workspace to the clusterfs before subsetting.
+
+SubjectList=/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/final/european/DTI/ukb43760_dtiTBSS_EID.dat
+# A custom list of subjects to be included in the subset
+
+
+
+## OUTPUT
+
+OutDir=/data/clusterfs/lag/users/barmol/enigma_evo/output/subset_dti
+# Working directory where (intermediate) output files are written to
