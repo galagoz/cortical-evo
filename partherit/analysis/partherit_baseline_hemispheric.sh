@@ -1,4 +1,4 @@
-#!/bin/sh
+!/bin/sh
 
 ftrait=$1
 fannot=$2

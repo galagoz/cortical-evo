@@ -1,0 +1,281 @@
+---
+title: "h2enrichment_barplots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(cowplot)
+library(gridExtra)
+library(scales)
+```
+
+### SNP-heritability enrichment plots
+
+```{r}
+# Load the ordering of the brain regions, so your bar plots can be ordered front to back
+annots = list.files(path = "/data/clusterfs/lag/users/gokala/enigma-evol/dti/data/munged/results_tables/", full.names = F, recursive = F, pattern = "FDR25")
+plot_list = list()
+```
+
+### 
+
+```{r}
+i=2
+
+for (i in 1:length(annots)){
+
+  # data wrangling  
+  annotname = str_split(annots[i], pattern = "\\.")[[1]][1]
+  resultsFile <- paste0("/data/clusterfs/lag/users/gokala/enigma-evol/dti/data/munged/results_tables/",annots[i])
+  results <- read.table(resultsFile[1], header = TRUE, sep = "\t")
+  
+  results$Region = unlist(sapply(strsplit(results$Region, split = "_allChr_"), `[`, 1))
+  
+  results_left = results[grep(results$Region, pattern = "left"),]
+  results_right = results[grep(results$Region, pattern = "right"),]
+  results_global = results[-c(grep(results$Region, pattern = "left"), grep(results$Region, pattern = "right")),]
+  
+  # plot global meaures
+  y_max1 <- max(results_global[results_global$Analysis == "WMtracts", 5])
+  y_axis_max1 <- y_max1 + results_global[results_global$Enrichment == y_max1, 6] + 0.02
+  label.df1 <- data.frame(Region = results_global$Region[results_global$significant=="Yes"&results_global$Analysis == "WMtracts"], 
+                          Enrichment=results_global$Enrichment[results_global$significant=="Yes"&results_global$Analysis == "WMtracts"]+0.05)
+  
+  pWM_global = ggplot(data = results_global[results_global$Analysis == "WMtracts", ], mapping = aes(Region, Enrichment)) +
+    geom_bar(stat = "identity", position = "dodge", fill = "#ED6B06") + ##00786A
+    geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Enrichment - Enrichment_std_error, ymax = Enrichment + Enrichment_std_error)) +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme(legend.position = "bottom") +
+    labs(
+      x = "Region",
+      y = expression(paste("SNP-", italic("h"^{
+        2
+      }), " Enrichment")),
+      title = "Global FA measures",
+      subtitle = paste0("SNP-heritability enrichment in ",annotname)
+    )
+  
+  pWM_global = pWM_global + geom_text(data = label.df1, label = "*",
+                                      vjust = ifelse(label.df1$Enrichment < 0, 0.5, -0.5))
+  
+  if (any(results_global$Enrichment_p < 0.05) & any(!grepl(results_global$significant[which(results_global$Enrichment_p < 0.05)],pattern = "Yes"))) {
+    label.df2 <- data.frame(Region = results_global$Region[results_global$Enrichment_p < 0.05], 
+                            Enrichment = results_global$Enrichment[results_global$Enrichment_p < 0.05] + 0.05)
+    pWM_global = pWM_global + geom_text(data = label.df2, label = "o",
+                                        vjust = ifelse(label.df2$Enrichment < 0, 0.5, -0.5))
+  }
+
+  # plot left hemispheric meaures
+  y_max1 <- max(results_left[results_left$Analysis == "WMtracts", 5])
+  y_axis_max1 <- y_max1 + results_left[results_left$Enrichment == y_max1, 6] + 0.02
+  label.df1 <- data.frame(Region = results_left$Region[results_left$significant=="Yes"&results_left$Analysis == "WMtracts"],
+                          Enrichment=results_left$Enrichment[results_left$significant=="Yes"&results_left$Analysis == "WMtracts"]+0.05)
+  
+  pWM_left = ggplot(data = results_left[results_left$Analysis == "WMtracts", ], mapping = aes(Region, Enrichment)) +
+    geom_bar(stat = "identity", position = "dodge", fill = "#ED6B06") + ##00786A
+    geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Enrichment - Enrichment_std_error, ymax = Enrichment + Enrichment_std_error)) +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme(legend.position = "bottom") +
+    labs(
+      x = "Region",
+      y = expression(paste("SNP-", italic("h"^{
+        2
+      }), " Enrichment")),
+      title = "Left hemispheric FA measures",
+      subtitle = paste0("SNP-heritability enrichment in ",annotname)
+    )
+  
+  pWM_left = pWM_left + geom_text(data = label.df1, label = "*",
+                                  vjust = ifelse(label.df1$Enrichment < 0, 0.5, -0.5)) #,size=5
+  if (any(results_left$Enrichment_p < 0.05) & any(!grepl(results_left$significant[which(results_left$Enrichment_p < 0.05)],pattern = "Yes"))) {
+    label.df2 <- data.frame(Region = results_left$Region[as.numeric(results_left$Enrichment_p) < 0.05],
+                            Enrichment=results_left$Enrichment[as.numeric(results_left$Enrichment_p) < 0.05]+0.05)
+    pWM_left = pWM_left + geom_text(data = label.df2, label = "o",
+                                    vjust = ifelse(label.df2$Enrichment < 0, 0.5, -0.5))
+  }
+  
+  # plot right hemispheric meaures
+  y_max1 <- max(results_right[results_right$Analysis == "WMtracts", 5])
+  y_axis_max1 <- y_max1 + results_right[results_right$Enrichment == y_max1, 6] + 0.02
+  label.df1 <- data.frame(Region = results_right$Region[results_right$significant=="Yes"&results_right$Analysis == "WMtracts"],
+                          Enrichment=results_right$Enrichment[results_right$significant=="Yes"&results_right$Analysis == "WMtracts"]+0.05)
+  
+  pWM_right = ggplot(data = results_right[results_right$Analysis == "WMtracts", ], mapping = aes(Region, Enrichment)) +
+    geom_bar(stat = "identity", position = "dodge", fill = "#ED6B06") + ##00786A
+    geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Enrichment - Enrichment_std_error, ymax = Enrichment + Enrichment_std_error)) +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme(legend.position = "bottom") +
+    labs(
+      x = "Region",
+      y = expression(paste("SNP-", italic("h"^{
+        2
+      }), " Enrichment")),
+      title = "Right hemispheric FA measures",
+      subtitle = paste0("SNP-heritability enrichment in ",annotname)
+    )
+  
+  pWM_right = pWM_right + geom_text(data = label.df1, label = "*",
+                                    vjust = ifelse(label.df1$Enrichment < 0, 0.5, -0.5)) #,size=5
+  if (any(results_right$Enrichment_p < 0.05) & any(!grepl(results_right$significant[which(results_right$Enrichment_p < 0.05)],pattern = "Yes"))) {
+    label.df2 <- data.frame(Region = results_right$Region[as.numeric(results_right$Enrichment_p) < 0.05],
+                            Enrichment=results_right$Enrichment[as.numeric(results_right$Enrichment_p) < 0.05]+0.05)
+    pWM_right = pWM_right + geom_text(data = label.df2, label = "o",
+                                      vjust = ifelse(label.df2$Enrichment < 0, 0.5, -0.5))
+  }
+  
+  plot_list[[i]] = plot_grid(pWM_global, pWM_left, pWM_right,
+                             labels = c("A", "B", "C"),
+                             ncol = 1, nrow = 3)
+}
+
+ggsave(
+  filename = "/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/dti/WM_h2_enrichment_barplots.pdf", 
+  plot = marrangeGrob(plot_list, nrow=1, ncol=1), 
+  width = 9, height = 15
+)
+
+```
+
+```{r}
+i=2
+
+  # data wrangling  
+  annotname = str_split(annots[i], pattern = "\\.")[[1]][1]
+  resultsFile <- paste0("/data/clusterfs/lag/users/gokala/enigma-evol/dti/data/munged/results_tables/",annots[i])
+  results <- read.table(resultsFile[1], header = TRUE, sep = "\t")
+  
+  results$Region = unlist(sapply(strsplit(results$Region, split = "_allChr_"), `[`, 1))
+  
+  results_left = results[grep(results$Region, pattern = "left"),]
+  results_right = results[grep(results$Region, pattern = "right"),]
+  results_global = results[-c(grep(results$Region, pattern = "left"), grep(results$Region, pattern = "right")),]
+  
+  # plot left hemispheric meaures
+  y_max1 <- max(results_left[results_left$Analysis == "WMtracts", 5])
+  y_axis_max1 <- y_max1 + results_left[results_left$Enrichment == y_max1, 6] + 0.02
+  label.df1 <- data.frame(Region = results_left$Region[results_left$significant=="Yes"&results_left$Analysis == "WMtracts"],
+                          Enrichment=results_left$Enrichment[results_left$significant=="Yes"&results_left$Analysis == "WMtracts"]+0.05)
+  
+  # Enrichment < Enrichment_std_error for following tracts:
+  # uncinate_fasciculus_left, cingulum_hippocampus_left, 
+  # retrolenticular_part_of_internal_capsule_left
+  
+  results_left = results_left[order(results_left$Enrichment),]
+  results_left$Region = c("Uncinate fasciculus", "Retrolenticular part of internal capsule", "Cingulum hippocampus",
+                          "Superior cerebellar peduncle", "External capsule", "Posterior limb of internal capsule",
+                          "Sagittal stratum", "Cingulum cingulate gyrus", "Cerebral peduncle",
+                          "Anterior limb of internal capsule", "Posterior corona radiata", "Superior corona radiata",
+                          "Superior longitudinal fasciculus", "Superior fronto-occipital fasciculus", "Anterior corona radiata",
+                          "Medial lemniscus", "Fornix cres+stria terminalis", "Tapetum",
+                          "Inferior cerebellar peduncle", "Corticospinal tract", "Posterior thalamic radiation")
+  
+  pWM_left = ggplot(data = results_left, mapping = aes(Enrichment, reorder(Region,-Enrichment))) +
+    geom_bar(stat = "identity", position = "dodge", fill = "#ED6B06") +
+    geom_linerange(position = position_dodge(width = 0.9), aes(xmin = ifelse(Enrichment  - Enrichment_std_error < 0, 0, Enrichment - Enrichment_std_error), 
+                                                               xmax = Enrichment + Enrichment_std_error)) +
+    theme_classic() +
+    #theme(axis.text.y = element_text(angle = 45, hjust = 1)) +
+    labs(
+      y = "Tract",
+      x = expression(paste("SNP-", italic("h"^{
+        2
+      }), " Enrichment")),
+      title = "Left hemispheric FA measures",
+      subtitle = paste0("SNP-heritability enrichment in ", annotname)
+    ) + scale_x_log10(breaks = c(0.001, 0.1, 0.5, 1, 1.5, 2)) +
+        #annotation_logticks(sides = "b") + 
+        coord_trans(x = scales::exp_trans(10), xlim = c(0.001, 2), expand = F)
+        
+        ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/dti/neanRA_left_enrichmentBarplots.pdf", pWM_left, dpi = 300)
+
+```
+```{r forSA}
+
+annots = list.files(path = "/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/results_tables/", full.names = F, recursive = F, pattern = "FDR43")
+
+# data wrangling
+annotname = str_split(annots[i], pattern = "\\.")[[1]][1]
+resultsFile <- paste0("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/results_tables/",annots[i])
+results <- read.table(resultsFile[1], header = TRUE, sep = "\t")
+
+#results = results[-grep(results$Region, pattern = "frontalpole"),]
+#results = results[-grep(results$Region, pattern = "rostralanteriorcingulate"),]
+
+results$Region = unlist(sapply(strsplit(results$Region, split = "_allChr_"), `[`, 1))
+
+# Split results into left and right
+results_left = results[grep(results$Region, pattern = "_le"),]
+results_right = results[grep(results$Region, pattern = "_re"),]
+
+# remove full SAs and regions with negative heritability estimates (they cannot be log-transformed)
+results_left = results_left[-grep(results_left$Region, pattern = "Full"),]
+results_right = results_right[-grep(results_right$Region, pattern = "Full"),]
+results_left = results_left[-grep(results_left$Region, pattern = "frontalpole"),]
+results_left = results_left[-grep(results_left$Region, pattern = "medialorbitofrontal"),]
+results_left = results_left[-grep(results_left$Region, pattern = "caudalanteriorcingulate"),]
+results_right = results_right[-grep(results_right$Region, pattern = "caudalanteriorcingulate"),]
+results_right = results_right[-grep(results_right$Region, pattern = "frontalpole"),]
+results_right = results_right[-grep(results_right$Region, pattern = "rostralanteriorcingulate"),]
+
+### plot left hemispheric meaures ###
+y_max1 <- max(results_left[results_left$Analysis == "Surface Area", 5])
+y_axis_max1 <- y_max1 + results_left[results_left$Enrichment == y_max1, 6] + 0.02
+label.df1 <- data.frame(Region = results_left$Region[results_left$significant=="Yes"&results_left$Analysis == "Surface Area"],
+                        Enrichment=results_left$Enrichment[results_left$significant=="Yes"&results_left$Analysis == "Surface Area"]+0.05)
+
+results_left = results_left[order(results_left$Enrichment),]
+results_left$Region = gsub("_le", "", results_left$Region)
+  
+pSA_left = ggplot(data = results_left, mapping = aes(Enrichment, reorder(Region,Enrichment))) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#ED6B06") +
+  geom_linerange(position = position_dodge(width = 0.9), aes(xmin = ifelse(Enrichment  - Enrichment_std_error < 0, 0, Enrichment - Enrichment_std_error), 
+                                                             xmax = Enrichment + Enrichment_std_error)) +
+  theme_classic() +
+  #theme(axis.text.y = element_text(angle = 45, hjust = 1)) +
+  labs(
+    y = "Region",
+    x = expression(paste("SNP-", italic("h"^{
+    2
+    }), " Enrichment")),
+    title = "Left hemispheric SA measures",
+    subtitle = paste0("SNP-heritability enrichment in ", annotname)
+) + scale_x_log10(breaks = c(0.001, 0.1, 0.5, 1, 1.5, 10)) +
+    #annotation_logticks(sides = "b") + 
+    coord_trans(x = scales::exp_trans(10), xlim = c(0.001, 13), expand = F)
+        
+    ggsave("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/plots/fetalHGE_left_enrichmentBarplots2.pdf", pSA_left, dpi = 300)
+
+### plot right hemispheric meaures ###
+y_max1 <- max(results_right[results_right$Analysis == "Surface Area", 5])
+y_axis_max1 <- y_max1 + results_right[results_right$Enrichment == y_max1, 6] + 0.02
+label.df1 <- data.frame(Region = results_right$Region[results_right$significant=="Yes"&results_right$Analysis == "Surface Area"],
+                        Enrichment=results_right$Enrichment[results_right$significant=="Yes"&results_right$Analysis == "Surface Area"]+0.05)
+
+results_right = results_right[order(results_right$Enrichment),]
+results_right$Region = gsub("_re", "", results_right$Region)
+  
+pSA_right = ggplot(data = results_right, mapping = aes(Enrichment, reorder(Region,Enrichment))) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#ED6B06") +
+  geom_linerange(position = position_dodge(width = 0.9), aes(xmin = ifelse(Enrichment  - Enrichment_std_error < 0, 0, Enrichment - Enrichment_std_error), 
+                                                             xmax = Enrichment + Enrichment_std_error)) +
+  theme_classic() +
+  #theme(axis.text.y = element_text(angle = 45, hjust = 1)) +
+  labs(
+    y = "Region",
+    x = expression(paste("SNP-", italic("h"^{
+    2
+    }), " Enrichment")),
+    title = "Right hemispheric SA measures",
+    subtitle = paste0("SNP-heritability enrichment in ", annotname)
+) + scale_x_log10(breaks = c(0.001, 0.1, 0.5, 1, 1.5, 10)) +
+    #annotation_logticks(sides = "b") + 
+    coord_trans(x = scales::exp_trans(10), xlim = c(0.001, 13), expand = F)
+        
+    ggsave("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/plots/fetalHGE_right_enrichmentBarplots2.pdf", pSA_right, dpi = 300)
+      
+```
+

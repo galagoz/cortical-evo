@@ -1,0 +1,141 @@
+---
+title: "reorganize_annotations.Rmd"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(GenomicRanges)
+library(ggplot2)
+library(cowplot)
+```
+
+## Filter overlapping SNPs in Neanderthal annotations
+
+```{r neanderthal_overlap}
+nean_introg_snps = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/partherit/beds/NeanSNPs_3col.bed")
+nean_dep_reg = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/partherit/beds/NeanDepleted_Vernot_Science_2016_TableS8.bed")
+nean_dep_reg=nean_dep_reg[,c(1,2,3)]
+
+nean_introg_snpsGR = makeGRangesFromDataFrame(nean_introg_snps, seqnames.field = "V1", start.field = "V2", end.field = "V3") # convert the bed file to a Genomic Ranges object
+
+removal_list_1 = subsetByOverlaps(nean_introg_snpsGR, nean_dep_regGR) # list of SNPs to remove from nean_introg_snpsGR
+#removal_list_2 = subsetByOverlaps(nean_dep_regGR, nean_introg_snpsGR) # list of regions to remove from nean_dep_regGR
+
+removal_list_1_df = data.frame(chr=seqnames(removal_list_1),startPos=start(removal_list_1),endPos=end(removal_list_1)) # convert Granges object to a data frame
+
+filtered_nean_introg_snps = nean_introg_snps[! nean_introg_snps$V2 %in% removal_list_1_df$startPos,]
+
+# 128 SNPs which overlap btw. introgressed and depleted annots
+write.table(removal_list_1_df,"/data/clusterfs/lag/users/gokala/enigma-evol/partherit/beds/new_annotations/overlapping_nean_SNPs.bed",col.names=F,row.names=F,quote=F)
+
+# Introgressed SNPs list without those 128 SNPs
+write.table(filtered_nean_introg_snps,"/data/clusterfs/lag/users/gokala/enigma-evol/partherit/beds/new_annotations/nean_SNPs.bed",col.names=F,row.names=F,quote=F)
+
+
+# Plot the densities of snps in the bed file for each chr seperately
+snps = data.frame(chr=seqnames(removal_list_1),start=start(removal_list_1),end=end(removal_list_1))
+snps$xmin=nean_dep_reg[nean_dep_reg$V1=="chr1",]$V2
+snps$xmax=nean_dep_reg[nean_dep_reg$V1=="chr1",]$V3
+snps[snps$chr=="chr18",]$xmin=nean_dep_reg[nean_dep_reg$V1=="chr18",]$V2
+snps[snps$chr=="chr18",]$xmax=nean_dep_reg[nean_dep_reg$V1=="chr18",]$V3
+snps[snps$chr=="chr2",]$xmin=nean_dep_reg[nean_dep_reg$V1=="chr2",]$V2
+snps[snps$chr=="chr2",]$xmax=nean_dep_reg[nean_dep_reg$V1=="chr2",]$V3
+snps[snps$chr=="chr7",]$xmin=nean_dep_reg[nean_dep_reg$V1=="chr7",]$V2
+snps[snps$chr=="chr7",]$xmax=nean_dep_reg[nean_dep_reg$V1=="chr7",]$V3
+snps[snps$chr=="chr8",]$xmin=nean_dep_reg[nean_dep_reg$V1=="chr8",]$V2
+snps[snps$chr=="chr8",]$xmax=nean_dep_reg[nean_dep_reg$V1=="chr8",]$V3
+
+
+snpDensity_chr1<-ggplot(snps[snps$chr=="chr1",]) + 
+geom_histogram(aes(x=start),binwidth=1e5) + # pick a binwidth that is not too small 
+facet_wrap(~ chr,ncol=2) + # seperate plots for each chr, x-scales can differ from chr to chr
+xlab("Position in the genome") + 
+ylab("SNP density") +
+xlim(nean_dep_reg[nean_dep_reg$V1=="chr1",]$V2,nean_dep_reg[nean_dep_reg$V1=="chr1",]$V3) + 
+theme_bw() # I prefer the black and white theme
+
+snpDensity_chr2<-ggplot(snps[snps$chr=="chr2",]) + 
+geom_histogram(aes(x=start),binwidth=1e5) + # pick a binwidth that is not too small 
+facet_wrap(~ chr,ncol=2) + # seperate plots for each chr, x-scales can differ from chr to chr
+xlab("Position in the genome") + 
+ylab("SNP density") +
+xlim(nean_dep_reg[nean_dep_reg$V1=="chr2",]$V2,nean_dep_reg[nean_dep_reg$V1=="chr2",]$V3) + 
+theme_bw() # I prefer the black and white theme
+
+snpDensity_chr7<-ggplot(snps[snps$chr=="chr7",]) + 
+geom_histogram(aes(x=start),binwidth=1e5) + # pick a binwidth that is not too small 
+facet_wrap(~ chr,ncol=2) + # seperate plots for each chr, x-scales can differ from chr to chr
+xlab("Position in the genome") + 
+ylab("SNP density") +
+xlim(nean_dep_reg[nean_dep_reg$V1=="chr7",]$V2,nean_dep_reg[nean_dep_reg$V1=="chr7",]$V3) + 
+theme_bw() # I prefer the black and white theme
+
+snpDensity_chr8<-ggplot(snps[snps$chr=="chr8",]) + 
+geom_histogram(aes(x=start),binwidth=1e5) + # pick a binwidth that is not too small 
+facet_wrap(~ chr,ncol=2) + # seperate plots for each chr, x-scales can differ from chr to chr
+xlab("Position in the genome") + 
+ylab("SNP density") +
+xlim(nean_dep_reg[nean_dep_reg$V1=="chr8",]$V2,nean_dep_reg[nean_dep_reg$V1=="chr8",]$V3) + 
+theme_bw() # I prefer the black and white theme
+
+snpDensity_chr18<-ggplot(snps[snps$chr=="chr18",]) + 
+geom_histogram(aes(x=start),binwidth=1e5) + # pick a binwidth that is not too small 
+facet_wrap(~ chr,ncol=2) + # seperate plots for each chr, x-scales can differ from chr to chr
+xlab("Position in the genome") + 
+ylab("SNP density") +
+xlim(nean_dep_reg[nean_dep_reg$V1=="chr18",]$V2,nean_dep_reg[nean_dep_reg$V1=="chr18",]$V3) + 
+theme_bw() # I prefer the black and white theme
+
+plot_grid(snpDensity_chr1, snpDensity_chr2,
+          snpDensity_chr7, snpDensity_chr8,
+          snpDensity_chr18,
+          nrow = 3, ncol = 2, align = 'hv')
+ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/overlapping_neanderthal_snps.pdf", width = 6, height = 7, unit = "in")
+```
+
+## Combine fetal Human Gained Enhancers
+
+```{r fetal_hge_merge}
+# First, I merged hge_7pcw, hge_8.5pcw, hge_12pcw frontal,hge_12pcw occipital bed files in bash using "cat" function and made the fetal_hge.bed file (wc -l fetal_hge.bed -> 20947)
+
+fetal_hge = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/partherit/beds/fetal_hge.bed")
+nrow(fetal_hge) #20947, no missing lines
+
+fetal_hgeGR = makeGRangesFromDataFrame(fetal_hge, seqnames.field = "V1", start.field = "V2", end.field = "V3") # convert list to GR object
+
+countOverlaps(fetal_hgeGR)
+findOverlaps(fetal_hgeGR)
+subsetByOverlaps(fetal_hgeGR)
+
+sum(width(fetal_hgeGR))
+sum(width(fetal_hgeGR[unique(findOverlaps(fetal_hgeGR, type = "any", select = "first"))]))
+sum(width(reduce(fetal_hgeGR)))
+
+findOverlaps(reduce(fetal_hgeGR))
+
+View(fetal_hge)
+```
+
+## Combine adult human vs. macaque Promoters and Enhancers
+
+```{r adult_macaque_ep_merge}
+# I merged adult human vs. macaque promoters and enhancers bed files in bash using "cat" function and made the adult_hge.bed file (wc -l adult_hge.bed -> 3210)
+
+adult_hge = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/partherit/beds/new_beds/adult_hge.bed")
+nrow(adult_hge) #3210 lines
+
+adult_hgeGR = makeGRangesFromDataFrame(adult_hge, seqnames.field = "V1", start.field = "V2", end.field = "V3") # convert list to GR object
+
+countOverlaps(adult_hgeGR)
+findOverlaps(adult_hgeGR)
+subsetByOverlaps(adult_hgeGR)
+
+sum(width(adult_hgeGR))
+sum(width(adult_hgeGR[unique(findOverlaps(adult_hgeGR, type = "any", select = "first"))]))
+sum(width(reduce(adult_hgeGR)))
+
+findOverlaps(reduce(adult_hgeGR))
+
+View(adult_hge)
+```

@@ -1,0 +1,246 @@
+---
+title: "left-right_comparison_plots"
+output: 
+  pdf_document:
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(cowplot)
+library(grid)
+library(gridExtra)
+```
+
+```{r read & clean data, echo=FALSE}
+# read the results table of HGE 7th PCW
+#left_enrich = read.table("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/european_lr/results_tables/left/fetal_hge_hg19.merged.sorted_results_FDR34.txt",header=T,sep="\t")
+#right_enrich = read.table("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/european_lr/results_tables/right/fetal_hge_hg19.merged.sorted_results_FDR34.txt",header=T,sep="\t")
+
+enrichment_results = read.table("/data/clusterfs/lag/users/gokala/enigma-evol/final_analysis/results/european/partherit/results_tables/fetal_hge_hg19.merged.sorted_results_FDR43.txt",header=T,sep="\t")
+
+#left_enrich = left_enrich[left_enrich$Analysis=="Surface Area",]
+#right_enrich = right_enrich[right_enrich$Analysis=="Surface Area",]
+
+# fix region names, get rid of blanks
+#enrichment_scores$Region=gsub(" re _", "_re", enrichment_scores$Region)
+#enrichment_scores$Region=gsub(" le _", "_le", enrichment_scores$Region)
+
+# remove globalNotScaled regions, because one is a duplicate and the other is for thickness
+#enrichment_scores = filter(enrichment_scores, !grepl("globalNotScaled",Region))
+#enrichment_scores$Region=gsub("globalScaled", "Full", enrichment_scores$Region)
+
+# separate left and right hemispheres
+right_enrich = enrichment_results %>%
+  filter(grepl("(?=.*_re)",enrichment_results$Region,perl=TRUE))
+left_enrich = enrichment_results %>%
+  filter(grepl("(?=.*_le)",enrichment_results$Region,perl=TRUE))
+
+```
+
+## Significant positive correlation between Heritability Enrichment scores derived from left and right hemispheres
+
+I will add labels for the outlier regions.
+
+```{r scatterplot, echo=FALSE}
+for_scatter = data.frame(Region = left_enrich$Region, 
+                         left_enrich = left_enrich$Enrichment, 
+                         right_enrich = right_enrich$Enrichment, 
+                         left_enrich_se =  left_enrich$Enrichment_std_error, 
+                         right_enrich_se = right_enrich$Enrichment_std_error, 
+                         left_prop = left_enrich$Prop._h2, 
+                         right_prop = right_enrich$Prop._h2, 
+                         left_prop_se =  left_enrich$Prop._h2_std_error, 
+                         right_prop_se = right_enrich$Prop._h2_std_error, 
+                         left_sig=left_enrich$significant,
+                         right_sig=right_enrich$significant)
+
+for_scatter$Region=gsub("_le", "", for_scatter$Region)
+
+cor.test(for_scatter$left_enrich,for_scatter$right_enrich,method="pearson")
+
+p1 = ggscatter(for_scatter, x = "right_enrich", y = "left_enrich", color = "#00786A",
+          add = "reg.line", cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Right Hemisphere", ylab = "Left Hemisphere", title = "Enrichment scores") +
+  theme_bw()
+p2 = ggscatter(for_scatter, x = "right_prop", y = "left_prop",  color = "#ED6B06",
+          add = "reg.line", cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Right Hemisphere", ylab = "Left Hemisphere", title = "Proportion of heritability") + theme_bw()
+plot_grid(p1,p2,labels=c('A','B'),label_size = 12)
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/partitioned_heritability/enrichment/left-right_enrichment_scatter_hemiSpec_cov.pdf",height = 4,width = 7)
+
+# MS version
+ggscatter(for_scatter, x = "right_prop", y = "left_prop",  color = "#EEA300",
+          add = "reg.line", cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Right Hemisphere", ylab = "Left Hemisphere", title = "Proportion of heritability") +           theme_bw()
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/partitioned_heritability/european_lr/eur_l-r_proph2_scatter.pdf",height = 8, width = 8)
+
+# without frontal pole
+for_scatter_woFP = for_scatter[-which(for_scatter$Region=="frontalpole"),]
+ggscatter(for_scatter_woFP, x = "right_enrich", y = "left_enrich",  color = "#EEA300",
+          add = "reg.line", cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Right Hemisphere", ylab = "Left Hemisphere", title = "SNP-heritability enrichment") +           theme_bw()
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/partitioned_heritability/european_lr/eur_l-r_enrichment_scatter_wo_frontalpole.pdf",height = 8,width = 8)
+
+
+```
+
+## Bar plot
+
+```{r, barplot, echo=FALSE, fig.height=10,fig.width=10, fig.cap=paste("Partitioned heritability for cortical surface area, following ancestry regression")}
+for_bar = for_scatter[,c("Region","left_enrich","right_enrich")] %>% 
+  gather(Hemisphere, Enrichment, -Region) %>%
+  mutate(Region = factor(Region)) %>%
+  arrange(Region)
+
+stars = for_scatter[,c("Region","left_sig","right_sig")] %>% 
+  gather(Hemisphere, Significance, -Region) %>%
+  mutate(Region = factor(Region)) %>%
+  arrange(Region)
+
+se = for_scatter[,c("Region","left_enrich_se","right_enrich_se")] %>% 
+  gather(Hemisphere, SE, -Region) %>%
+  mutate(Region = factor(Region)) %>%
+  arrange(Region)
+
+for_bar$Significance = stars$Significance
+for_bar$SE = se$SE
+regionordering <- read.csv("/data/workspaces/lag/workspaces/lg-neanderthals/raw_data/ENIGMA-EVO/MA6/Cerebral_Cortex_revisions/plotting/freesurfer_orderandcolor.csv")
+for_bar$Region = factor(for_bar$Region, levels = regionordering$Region)
+for_bar = for_bar[c(which(for_bar$Region=="Full"),which(for_bar$Region!="Full")),] # move Full to the top
+
+label.df.left = for_bar[for_bar$Significance=="Yes"&for_bar$Hemisphere=="left_enrich",]
+label.df.right = for_bar[for_bar$Significance=="Yes"&for_bar$Hemisphere=="right_enrich",]
+
+##### Bar plot for heritability enrichment #####
+
+bargraph_enrichment = ggplot(data = for_bar,aes(x = Region,
+                                     y = Enrichment,
+                                     fill = Hemisphere)) +
+           geom_bar(stat = "identity", position = position_dodge()) +
+           geom_errorbar(aes(ymin=Enrichment-SE, ymax=Enrichment+SE),width=0.2,
+                         position = position_dodge(width = 0.9)) +
+           theme_classic() +
+           theme(legend.title=element_blank(),axis.text.x = element_text(angle = 45, hjust = 1)) +
+           labs(y = expression("Heritability Enrichment"),
+           title = "Enrichment scores") + 
+           scale_fill_manual(values=c("yellow4","sienna4")) +
+           geom_text(data = label.df.left,aes(x=Region, y=Enrichment + 5), label = "*  ", color="yellow4") +
+           geom_text(data = label.df.right,aes(x=Region, y=Enrichment + 5), label = "  *",color="sienna4") +
+           geom_segment(aes(x=for_bar$Region,y=-Inf,xend=for_bar$Region,yend=0), linetype=3, colour="light gray") + theme(legend.position='none',axis.title.x=element_blank())
+
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/left_right_partherit_enrichment_color2.pdf", width = 9, height = 6, unit = "in")
+
+##### Bar plot for heritability proportion #####
+
+for_bar2 = for_scatter[,c("Region","left_prop","right_prop")] %>% 
+  gather(Hemisphere, Proportion, -Region) %>%
+  mutate(Region = factor(Region)) %>%
+  arrange(Region)
+
+se2 = for_scatter[,c("Region","left_prop_se","right_prop_se")] %>% 
+  gather(Hemisphere, SE, -Region) %>%
+  mutate(Region = factor(Region)) %>%
+  arrange(Region)
+
+for_bar2$Significance = stars$Significance
+for_bar2$SE = se2$SE
+for_bar2$Region = factor(for_bar2$Region, levels = regionordering$Region)
+for_bar2 = for_bar2[c(which(for_bar2$Region=="Full"),which(for_bar2$Region!="Full")),] # move 
+
+label.df.left2 = for_bar2[for_bar2$Significance=="Yes"&for_bar2$Hemisphere=="left_prop",]
+label.df.right2 = for_bar2[for_bar2$Significance=="Yes"&for_bar2$Hemisphere=="right_prop",]
+
+bargraph_prop = ggplot(data = for_bar2,aes(x = Region,
+                                     y = Proportion,
+                                     fill = Hemisphere)) +
+           geom_bar(stat = "identity", position = position_dodge()) +
+           geom_errorbar(aes(ymin=Proportion-SE, ymax=Proportion+SE),width=0.2,
+                         position = position_dodge(width = 0.9)) +
+           theme_classic() +
+           theme(legend.title=element_blank(),axis.text.x = element_text(angle = 45, hjust = 1)) +
+           labs(x = "Region", y = expression("Heritability Proportion"),
+           title = "Proportion of heritability") + 
+           scale_fill_manual(values=c("yellow4","sienna4"),labels=c("Right Hemisphere","Left Hemisphere")) +
+           geom_text(data = label.df.left2,aes(x=Region, y=Proportion + 0.05), label = "* ", color="yellow4") +
+           geom_text(data = label.df.right2,aes(x=Region, y=Proportion + 0.05), label = " *",color="sienna4") +
+           geom_segment(aes(x=for_bar$Region,y=-Inf,xend=for_bar$Region,yend=0), linetype=3, colour="light gray") + theme(legend.position="bottom")
+
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/left_right_partherit_proportion_color2.pdf", width = 9, height = 6, unit = "in")
+
+##
+
+plot_grid(bargraph_enrichment,bargraph_prop,labels=c('A','B'),label_size = 12, ncol=1)
+
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/partitioned_heritability/european_lr/eur_lr_partherit_enrichment_and_proportion.pdf", width = 9, height = 8, unit = "in")
+```
+
+# Back to back L-R h2 plot
+
+```{r overlap analysis, echo=FALSE}
+
+# remove these 2 regions as the error bars are huge for these 2 regions
+for_bar = for_bar[-which(for_bar$Region=="frontalpole"),]
+for_bar = for_bar[-which(for_bar$Region=="rostralanteriorcingulate"),]
+
+g.mid = ggplot(for_bar,aes(x=1,y=fct_rev(Region))) + 
+  geom_text(aes(label=Region),size=3.2) +
+  geom_segment(aes(x=0.94,xend=0.95,yend=Region)) +
+  geom_segment(aes(x=1.05,xend=1.06,yend=Region)) +
+  ggtitle("") +
+  ylab(NULL) +
+  scale_x_continuous(expand=c(0,0),limits=c(0.94,1.065)) +
+  theme(axis.title=element_blank(),
+        panel.grid=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        panel.background=element_blank(),
+        axis.text.x=element_text(color=NA),
+        axis.ticks.x=element_blank(), #element_line(color=NA)
+        plot.margin = unit(c(1,-1,1,-1), "mm")) #unit(c(1,-1,1,-1), "mm")
+
+grid_plot1 = ggplot(data = for_bar[for_bar$Hemisphere=="left_enrich",], aes(x = fct_rev(Region), y = Enrichment)) +
+  geom_bar(stat = "identity",fill="#00786A") + ggtitle("                          Left Hemisphere") +
+  geom_errorbar(aes(ymin=Enrichment-SE, ymax=Enrichment+SE),
+                width=0.1,
+                position = position_dodge(width = 0.9), colour = "#ED6B06") +
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank(), 
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(),
+        panel.background=element_blank(),
+        plot.margin = unit(c(1,-1,1,0), "mm")) +
+  geom_text(data = label.df.left,aes(x=Region, y=Enrichment + 1), label = "*", color="#ED6B06") +
+  scale_y_reverse(lim=c(14,-4)) + coord_flip()
+
+grid_plot2 = ggplot(data = for_bar[for_bar$Hemisphere=="right_enrich",], aes(x = fct_rev(Region), y = Enrichment)) +xlab(NULL)+
+  geom_bar(stat = "identity",fill="#00786A") + ggtitle("Right Hemisphere") +
+  geom_errorbar(aes(ymin=Enrichment-SE, ymax=Enrichment+SE),
+                width=0.1,
+                position = position_dodge(width = 0.9), colour = "#ED6B06") +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.background=element_blank(),
+        plot.margin = unit(c(1,0,1,-1), "mm")) + ylim(-4,14) +
+  geom_text(data = label.df.right,aes(x=Region, y=Enrichment + 1), label = "*", color="#ED6B06") +
+  coord_flip()
+
+gg1 <- ggplot_gtable(ggplot_build(grid_plot1))
+gg2 <- ggplot_gtable(ggplot_build(grid_plot2))
+gg.mid <- ggplot_gtable(ggplot_build(g.mid))
+
+#pdf("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/partitioned_heritability/european_lr/left-right_proph2_barplot_wo_2regions.pdf",height = 5, width = 7)
+grid.arrange(gg1,gg.mid,gg2,ncol=3,widths=c(4.2/11,2.6/11,4.2/11))
+#dev.off()
+
+for_bar2[for_bar2$Hemisphere=="left_prop",]
+
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/partitioned_heritability/european_lr/left-right_proph2_barplot2.pdf", height = 4, width = 7)
+```
+sessionInfo()

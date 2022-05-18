@@ -1,0 +1,241 @@
+---
+title: "e3_replication_comparison"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+## OHBM plots
+knitr::opts_chunk$set(echo = TRUE)
+options(stringsAsFactors=FALSE)
+library("data.table")
+library("cocor")
+library("ggplot2")
+library("tidyverse")
+library(cowplot)
+library(reshape2)
+```
+
+## R Markdown
+
+```{r read and clean data}
+# read correlation values
+e3=read.csv("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/ohbm/original_corvalues_Mean_Full_SurfArea_BJK.csv")
+e3_ancreg=read.csv("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/ohbm/ancestryregressed_corvalues_Mean_Full_SurfArea_BJK.csv")
+rep_1=read.csv("/data/clusterfs/lag/users/gokala/enigma-evol/corvals/replication/surface/corvalues_surface_Full_replication_BJK.csv")
+rep_1_ancreg=read.csv("/data/clusterfs/lag/users/gokala/enigma-evol/corvals/ancreg_replication/surface/corvalues_surface_Full_replication_ancreg.Rdata_ancreg_BJK.csv")
+
+# read ldsc intercepts
+e3_ldsc=read.csv("/data/workspaces/lag/workspaces/lg-neanderthals/raw_data/ENIGMA-EVO/MA6/LDSC/MA6_LDSC_intercepts_before_after_Phase3_ancreg_Rdata_based_noGC.csv")
+e3_ldsc=e3_ldsc[e3_ldsc$Surf_Thic=="Surface Area",] # &e3_ldsc$Anc_reg=="TRUE"
+e3_ldsc=e3_ldsc[-which(e3_ldsc$Region=="temporalpole"),] # remove temporalpole, because it's not included in the replication study
+rep_1_ldsc=read.csv("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/ldsc/replication_LDSC_intercepts_w_and_wo_ancreg.csv")
+#rep_1_ldsc=rep_1_ldsc[rep_1_ldsc$Surf_Thic=="Surface Area",] #&rep_1_ldsc$Anc_reg=="TRUE"
+#row.names(rep_1_ldsc)=seq(1,nrow(rep_1_ldsc),1)
+#rep_1_ldsc[rep_1_ldsc$Region=="global",1]="Full"
+#rep_1_ldsc=rep_1_ldsc[69:83,]
+
+# read partitioned heritability files
+e3_partherit=read.table("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/ohbm/HSE_7pcw_active_merged_results_FDR35.txt",header=T,sep="\t")
+e3_partherit=e3_partherit[e3_partherit$Analysis=="Surface Area",]
+rep_1_partherit=read.table("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/partitioned_heritability/final_results/replication/results_tables/HSE_7pcw_active_merged_results_FDR34.txt",header=T,sep="\t")
+e3_partherit=e3_partherit[e3_partherit$Analysis=="Surface Area",]
+rep_1_partherit=rep_1_partherit[rep_1_partherit$Analysis=="Surface Area",]
+merged3=merge(e3_partherit,rep_1_partherit,by="Region")
+merged3=merged3[,c("Region","Prop._h2.x","Prop._h2_std_error.x","significant.x","Prop._h2.y","Prop._h2_std_error.y","significant.y")]
+```
+
+## E3 vs. replication comparison ancestry-PC correlation barplots
+
+```{r pressure, echo=FALSE}
+
+##Make barplots of correlation estimates for each
+# e3 plot
+corind_e3 = grep("BJK_cor",colnames(e3))
+pind_e3 = grep("BJK_P",colnames(e3))
+seind_e3 = grep("BJK_SE",colnames(e3))
+x_e3 = barplot(as.matrix(e3[1,corind_e3]),main=e3$X[1],ylab="correlation coefficient",xlab="Ancestry PC",names.arg=paste0("PC",seq(1,20)),ylim=c(-0.05,0.05))
+y0_e3 = as.numeric(e3[1,corind_e3]-e3[1,seind_e3])
+y1_e3 = as.numeric(e3[1,corind_e3]+e3[1,seind_e3])
+arrows(x_e3,y0_e3,x_e3,y1_e3,angle=90,length=0)
+bonfsigind_e3 = which(e3[1,pind_e3] < 0.05/20)
+nomsigind_e3 = which(e3[1,pind_e3] >= 0.05/20 & e3[1,pind_e3] < 0.05)
+
+# replication 1 (white british subset) plot
+corind_rep_1 = grep("BJK_cor",colnames(rep_1))
+pind_rep_1 = grep("BJK_P",colnames(rep_1))
+seind_rep_1 = grep("BJK_SE",colnames(rep_1))
+x_rep_1 = barplot(as.matrix(rep_1[1,corind_rep_1]),main=rep_1$X[1],ylab="correlation coefficient",xlab="Ancestry PC",names.arg=paste0("PC",seq(1,20)),ylim=c(-0.05,0.05))
+y0_rep_1 = as.numeric(rep_1[1,corind_rep_1]-rep_1[1,seind_rep_1])
+y1_rep_1 = as.numeric(rep_1[1,corind_rep_1]+rep_1[1,seind_rep_1])
+arrows(x_rep_1,y0_rep_1,x_rep_1,y1_rep_1,angle=90,length=0)
+bonfsigind_rep_1 = which(rep_1[1,pind_rep_1] < 0.05/20)
+nomsigind_rep_1 = which(rep_1[1,pind_rep_1] >= 0.05/20 & rep_1[1,pind_rep_1] < 0.05)
+
+# E3 results shaded at the back and replication is at the front - plot & save
+#pdf("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/ancestry_correlations/raw/corvalues_e3_vs_replication_comparison.pdf", width = 8, height = 4)
+barplot(as.matrix(e3[1,corind_e3]),col="dark gray",main="Mean Full Surface Area",ylab="correlation coefficient",xlab="Ancestry PC",names.arg=paste0("PC",seq(1,20)),ylim=c(-0.05,0.05),border=NA, yaxp = c(-0.05,0.05,2),las=2,cex.names=0.75)
+arrows(x_e3,y0_e3,x_e3,y1_e3,col="dark gray",angle=90,length=0)
+par(new = TRUE)
+barplot(as.matrix(rep_1[1,corind_rep_1]),col="black",ylim=c(-0.05,0.05), yaxp = c(-0.05,0.05,2),las=2, xaxt="n")
+arrows(x_rep_1,y0_rep_1,x_rep_1,y1_rep_1,col="black",angle=90,length=0)
+text(x_e3[bonfsigind_e3],col="dark gray",0.045,"*")
+text(x_e3[nomsigind_e3],col="dark gray",0.045,"o")
+text(x_rep_1[bonfsigind_rep_1],col="black",0.040,"*")
+text(x_rep_1[nomsigind_rep_1],col="black",0.040,"o")
+#dev.off()
+
+# MS version - yellow
+pdf("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/ancestry_correlations/corvalues_e3_vs_replication_comparison.pdf", width = 8, height = 4)
+barplot(as.matrix(e3[1,corind_e3]),col="#F7D27F",main="Mean Full Surface Area",ylab="correlation coefficient",xlab="Ancestry PC",names.arg=paste0("PC",seq(1,20)),ylim=c(-0.05,0.05),border=NA, yaxp = c(-0.05,0.05,2),las=2,cex.names=0.75)
+arrows(x_e3,y0_e3,x_e3,y1_e3,col="#F7D27F",angle=90,length=0)
+par(new = TRUE)
+barplot(as.matrix(rep_1[1,corind_rep_1]),col="#EEA300",ylim=c(-0.05,0.05),border=NA, yaxp = c(-0.05,0.05,2),las=2, xaxt="n")
+arrows(x_rep_1,y0_rep_1,x_rep_1,y1_rep_1,col="#EEA300",angle=90,length=0)
+text(x_e3[bonfsigind_e3],col="#F7D27F",0.045,"*")
+text(x_e3[nomsigind_e3],col="#F7D27F",0.045,"o")
+text(x_rep_1[bonfsigind_rep_1],col="#EEA300",0.040,"*")
+text(x_rep_1[nomsigind_rep_1],col="#EEA300",0.040,"o")
+dev.off()
+
+##### Ancestry regressed correlation plots
+# e3 plot
+corind_e3_ancreg = grep("BJK_cor",colnames(e3_ancreg))
+pind_e3_ancreg = grep("BJK_P",colnames(e3_ancreg))
+seind_e3_ancreg = grep("BJK_SE",colnames(e3_ancreg))
+x_e3_ancreg = barplot(as.matrix(e3_ancreg[1,corind_e3_ancreg]),main=e3_ancreg$X[1],ylab="correlation coefficient",xlab="Ancestry PC",names.arg=paste0("PC",seq(1,20)),ylim=c(-0.05,0.05))
+y0_e3_ancreg = as.numeric(e3_ancreg[1,corind_e3_ancreg]-e3_ancreg[1,seind_e3_ancreg])
+y1_e3_ancreg = as.numeric(e3_ancreg[1,corind_e3_ancreg]+e3_ancreg[1,seind_e3_ancreg])
+arrows(x_e3_ancreg,y0_e3_ancreg,x_e3_ancreg,y1_e3_ancreg,angle=90,length=0)
+bonfsigind_e3_ancreg = which(e3_ancreg[1,pind_e3_ancreg] < 0.05/20)
+nomsigind_e3_ancreg = which(e3_ancreg[1,pind_e3_ancreg] >= 0.05/20 & e3_ancreg[1,pind_e3_ancreg] < 0.05)
+
+# replication 1 (white british subset) plot
+corind_rep_1_ancreg = grep("BJK_cor",colnames(rep_1_ancreg))
+pind_rep_1_ancreg = grep("BJK_P",colnames(rep_1_ancreg))
+seind_rep_1_ancreg = grep("BJK_SE",colnames(rep_1_ancreg))
+x_rep_1_ancreg = barplot(as.matrix(rep_1_ancreg[1,corind_rep_1_ancreg]),main=rep_1_ancreg$X[1],ylab="correlation coefficient",xlab="Ancestry PC",names.arg=paste0("PC",seq(1,20)),ylim=c(-0.05,0.05))
+y0_rep_1_ancreg = as.numeric(rep_1_ancreg[1,corind_rep_1_ancreg]-rep_1_ancreg[1,seind_rep_1_ancreg])
+y1_rep_1_ancreg = as.numeric(rep_1_ancreg[1,corind_rep_1_ancreg]+rep_1_ancreg[1,seind_rep_1_ancreg])
+arrows(x_rep_1_ancreg,y0_rep_1_ancreg,x_rep_1_ancreg,y1_rep_1_ancreg,angle=90,length=0)
+bonfsigind_rep_1_ancreg = which(rep_1_ancreg[1,pind_rep_1_ancreg] < 0.05/20)
+nomsigind_rep_1_ancreg = which(rep_1_ancreg[1,pind_rep_1_ancreg] >= 0.05/20 & rep_1_ancreg[1,pind_rep_1_ancreg] < 0.05)
+
+#pdf("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/ohbm/ancreg_corvalues_e3_vs_replication_darkgray.pdf", width = 8, height = 4)
+barplot(as.matrix(e3_ancreg[1,corind_e3_ancreg]),col="dark gray",main="Mean Full Surface Area",ylab="correlation coefficient",xlab="Ancestry PC",names.arg=paste0("PC",seq(1,20)),ylim=c(-0.05,0.05),border=NA, yaxp = c(-0.05,0.05,2),las=2,cex.names=0.75)
+arrows(x_e3_ancreg,y0_e3_ancreg,x_e3_ancreg,y1_e3_ancreg,col="dark gray",angle=90,length=0)
+par(new = TRUE)
+barplot(as.matrix(rep_1_ancreg[1,corind_rep_1_ancreg]),col="black",ylim=c(-0.05,0.05), yaxp = c(-0.05,0.05,2),las=2, xaxt="n")
+arrows(x_rep_1_ancreg,y0_rep_1_ancreg,x_rep_1_ancreg,y1_rep_1_ancreg,col="black",angle=90,length=0)
+#dev.off()
+
+# MS version - yellow
+pdf("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/ancestry_correlations/ancreg_corvalues_e3_vs_replication_comparison.pdf", width = 8, height = 4)
+barplot(as.matrix(e3_ancreg[1,corind_e3_ancreg]),col="#F7D27F",main="Mean Full Surface Area",ylab="correlation coefficient",xlab="Ancestry PC",names.arg=paste0("PC",seq(1,20)),ylim=c(-0.05,0.05),border=NA, yaxp = c(-0.05,0.05,2),las=2,cex.names=0.75)
+arrows(x_e3_ancreg,y0_e3_ancreg,x_e3_ancreg,y1_e3_ancreg,col="#F7D27F",angle=90,length=0)
+par(new = TRUE)
+barplot(as.matrix(rep_1_ancreg[1,corind_rep_1_ancreg]),col="#EEA300",ylim=c(-0.05,0.05), yaxp = c(-0.05,0.05,2),las=2, xaxt="n")
+arrows(x_rep_1_ancreg,y0_rep_1_ancreg,x_rep_1_ancreg,y1_rep_1_ancreg,col="#EEA300",angle=90,length=0)
+dev.off()
+
+```
+
+```{r ldsc}
+
+## LDSC comparison plots
+#e3_ldsc = e3_ldsc[c(which(e3_ldsc$Region=="Full"),which(e3_ldsc$Region!="Full")),] # move Full to the top
+#my.order = seq(1,136,1)
+
+e3_ldsc$sample="Tilot et al. (2021)"
+rep_1_ldsc$sample="Replication"
+merged2=rbind(e3_ldsc,rep_1_ldsc)
+merged2$sample_f=factor(merged2$sample, levels= c("Tilot et al. (2021)","Replication"))
+
+# Reversing order of the brain regions for the plot, so Full is on top after coord_flip
+regionordering = read.csv("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/resources/freesurfer_orderandcolor.csv")
+merged2$Region = factor(merged2$Region, levels = regionordering$Region)
+merged2$Region <- fct_rev(merged2$Region)
+
+ggplot(merged2, 
+#       aes(fct_rev(reorder(Region,my.order)), LDSC_intercept,color=Anc_reg)) + 
+       aes(x = Region, y = LDSC_intercept, color=Anc_reg)) + 
+       geom_errorbar(aes(ymax = LDSC_intercept + LDSC_int_sterr,  ymin = LDSC_intercept - LDSC_int_sterr),
+       position = position_dodge(0.9),width=0) +
+       geom_point(position = position_dodge(0.9), size = 2) + 
+       facet_grid(. ~ sample_f) +
+       scale_color_manual(name = "Ancestry regression", labels = c("Prior to ancestry regression", "After ancestry regression"),values=c("#af8dc3", "#7fbf7b")) +
+  background_grid(major = 'y', minor = "none") + # add thin horizontal lines 
+       labs(y = "LDSC Intercept", x = "Region", title = "Changes in LDSC intercept due to ancestry regression") + 
+       panel_border() + coord_flip() +
+       geom_hline(yintercept = 1, linetype="dotted", color = "black", size=0.5) +
+       theme(plot.title = element_text(hjust = 0.5),text=element_text(size=17)) + theme_minimal()
+
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/ldsc/e3_rep_LDSC_intercepts_before_after_ancreg_w_errorbars_surfaceArea_minimal.pdf", width = 9, height = 9, unit = "in")
+#ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/ldsc/e3_rep_LDSC_intercepts_before_after_ancreg_w_errorbars_surfaceArea_dpi400.png", unit = "in",dpi = 400)
+```
+
+```{r partitioned heritability}
+## Partitioned heritability comparison plots
+regionordering <- read.csv("/data/workspaces/lag/workspaces/lg-neanderthals/raw_data/ENIGMA-EVO/MA6/Cerebral_Cortex_revisions/plotting/freesurfer_orderandcolor.csv")
+merged3$Region = factor(merged3$Region, levels = regionordering$Region)
+#merged3 = merged3[c(which(merged3$Region=="Full"),which(merged3$Region!="Full")),] # move Full to the top
+
+# Asterisks
+y_max <- max(merged3[,c(2,5)])
+y_axis_max <- y_max + merged3[merged3$Prop._h2.y==y_max, 5] + 0.02
+label.df.x <- data.frame(Region = merged3$Region[merged3$significant.x=="Yes"],Prop._h2.x=merged3$Prop._h2.x[merged3$significant.x=="Yes"]+0.07)
+label.df.y <- data.frame(Region = merged3$Region[merged3$significant.y=="Yes"],Prop._h2.y=merged3$Prop._h2.y[merged3$significant.y=="Yes"]+0.09)
+colnames(label.df.y)[2]="Prop._h2.x"
+
+ggplot(data = merged3, aes(Region, Prop._h2.x)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#F7B682") +
+  geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Prop._h2.x - Prop._h2_std_error.x, ymax = Prop._h2.x + Prop._h2_std_error.x),color="#F7B682") +
+  geom_bar(data=merged3, aes(Region, Prop._h2.y), stat = "identity", position = "dodge", fill = "#ED6B06") +
+  geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Prop._h2.y - Prop._h2_std_error.y, ymax = Prop._h2.y + Prop._h2_std_error.y),color="#ED6B06") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1,size=5)) +
+  theme(legend.position = "bottom") +
+  labs(x = "Region", y = expression(paste("Prop. ", italic("h"^{2}))),
+    title = "Partitioned heritability for cortical surface area, following ancestry regression",
+    subtitle = "Proportion of heritability explained",size=5) +
+  geom_text(data = label.df.x, label = "*", col="#F7B682",size=5) +
+  geom_text(data = label.df.y, label = "*", col="#ED6B06",size=5)
+ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/ohbm/plots/e3_rep_partherit_w_errorbars_surfaceArea_mpi_colors.pdf", width = 9, height = 6, unit = "in")
+ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/ohbm/plots/e3_rep_partherit_w_errorbars_surfaceArea_mpi_colors4.png", width = 16, height = 9, dpi = 500, device="png",scale=0.3)
+
+# MS version - blue
+ggplot(data = merged3, aes(Region, Prop._h2.x)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#90A5CE") +
+  geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Prop._h2.x - Prop._h2_std_error.x, ymax = Prop._h2.x + Prop._h2_std_error.x),color="#90A5CE") +
+  geom_bar(data=merged3, aes(Region, Prop._h2.y), stat = "identity", position = "dodge", fill = "#214D9D") +
+  geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Prop._h2.y - Prop._h2_std_error.y, ymax = Prop._h2.y + Prop._h2_std_error.y),color="#214D9D") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom") +
+  labs(x = "Region", y = expression(paste("Prop. ", italic("h"^{2}))),
+    title = "Partitioned heritability for cortical surface area, following ancestry regression",
+    subtitle = "Proportion of heritability explained",size=5) +
+  geom_text(data = label.df.x, label = "*", col="#90A5CE",size=5) +
+  geom_text(data = label.df.y, label = "*", col="#214D9D",size=5)
+
+# MS version - yellow
+ggplot(data = merged3, aes(Region, Prop._h2.x)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#F7D27F") +
+  geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Prop._h2.x - Prop._h2_std_error.x, ymax = Prop._h2.x + Prop._h2_std_error.x),color="#F7D27F") +
+  geom_bar(data=merged3, aes(Region, Prop._h2.y), stat = "identity", position = "dodge", fill = "#EEA300") +
+  geom_linerange(position = position_dodge(width = 0.9), aes(ymin = Prop._h2.y - Prop._h2_std_error.y, ymax = Prop._h2.y + Prop._h2_std_error.y),color="#EEA300") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom") +
+  labs(x = "Region", y = expression(paste("Prop. ", italic("h"^{2}))),
+    title = "Partitioned heritability for cortical surface area, following ancestry regression",
+    subtitle = "Proportion of heritability explained",size=5) +
+  geom_text(data = label.df.x, label = "*", col="#F7D27F",size=5) +
+  geom_text(data = label.df.y, label = "*", col="#EEA300",size=5)
+ggsave("/data/workspaces/lag/workspaces/lg-ukbiobank/projects/enigma_evol/enigma_evo/evolution/results/plots/partitioned_heritability/e3_rep_partherit__HSE7PCW_SA_yellow.pdf", width = 9, height = 6, unit = "in")
+
+```
+
+```{r}
+
+```
+
